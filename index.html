@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Tenancy Application</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        h2 {
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .form-group select {
+            font-family: Arial, sans-serif; /* Match font to input fields */
+            font-size: 16px;
+            padding: 8px; /* Make dropdowns narrower */
+        }
+        .error {
+            color: red;
+            margin-top: 5px;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .preview {
+            background-color: #e9ecef;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .copy-btn {
+            background-color: #28a745;
+        }
+        .copy-btn:hover {
+            background-color: #218838;
+        }
+        #previewContainer {
+            margin-top: 20px;
+        }
+        .confetti {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Tenancy Application Form</h2>
+        <form id="applicationForm" onsubmit="return generateTemplate()">
+            <div class="form-group">
+                <label for="recipientName">Recipient Name:</label>
+                <input type="text" id="recipientName" name="recipientName">
+            </div>
+
+            <div class="form-group">
+                <label for="messageType">Message Type:</label>
+                <select id="messageType" name="messageType" onchange="toggleFields()" required>
+                    <option value="">Select an option</option>
+                    <option value="SMS">SMS</option>
+                    <option value="Email">Email</option>
+                    <option value="Website Message">Website Message</option>
+                </select>
+            </div>
+
+            <div id="recipientEmailField" class="form-group" style="display: none;">
+                <label for="recipientEmail">Recipient Email:</label>
+                <input type="email" id="recipientEmail" name="recipientEmail">
+            </div>
+
+            <div id="recipientPhoneField" class="form-group" style="display: none;">
+                <label for="recipientPhone">Recipient Phone Number (xxx-xxx-xxxx):</label>
+                <input type="tel" id="recipientPhone" name="recipientPhone" pattern="\d{3}-\d{3}-\d{4}">
+            </div>
+
+            <div class="form-group">
+                <label for="messagerName">Messager Name:</label>
+                <select id="messagerName" name="messagerName" onchange="autofillPhone()" required>
+                    <option value="">Select a name</option>
+                    <option value="Rachel">Rachel</option>
+                    <option value="Alexandra">Alexandra</option>
+                    <option value="Laura">Laura</option>
+                    <option value="Eleanor">Eleanor</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="messagerPhone">Messager Phone Number:</label>
+                <input type="tel" id="messagerPhone" name="messagerPhone" pattern="\d{3}-\d{3}-\d{4}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="website">Website:</label>
+                <select id="website" name="website" onchange="toggleWebsiteField()" required>
+                    <option value="">Select a website</option>
+                    <option value="Craigslist">Craigslist</option>
+                    <option value="Facebook">Facebook</option>
+                    <option value="Rent.ca">Rent.ca</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div id="otherWebsiteField" class="form-group" style="display: none;">
+                <label for="otherWebsite">Website Name:</label>
+                <input type="text" id="otherWebsite" name="otherWebsite">
+            </div>
+
+            <div id="linkField" class="form-group" style="display: none;">
+                <label for="link">Link:</label>
+                <input type="url" id="link" name="link">
+            </div>
+
+            <button type="submit" class="btn">Generate Template</button>
+            <button type="button" class="btn copy-btn" onclick="copyToClipboard()">Copy to Clipboard</button>
+        </form>
+
+        <div id="previewContainer">
+            <h3>Generated Template:</h3>
+            <pre id="templateOutput" class="preview"></pre>
+        </div>
+
+        <div id="confetti" class="confetti"></div>
+
+    </div>
+
+    <script>
+        const contactPhones = {
+            "Rachel": "101-456-7891",
+            "Alexandra": "101-567-8919",
+            "Laura": "101-123-4567",
+            "Eleanor": "101-234-5678",
+        };
+
+        function toggleFields() {
+            const messageType = document.getElementById('messageType').value;
+            const linkField = document.getElementById('linkField');
+            document.getElementById('recipientEmailField').style.display = (messageType === 'Email') ? 'block' : 'none';
+            document.getElementById('recipientPhoneField').style.display = (messageType === 'SMS') ? 'block' : 'none';
+            if (messageType === 'Website Message') {
+                linkField.style.display = 'none';
+            } else if (document.getElementById('website').value === 'Other' || messageType === 'Email') {
+                linkField.style.display = 'block';
+            } else {
+                linkField.style.display = 'none';
+            }
+        }
+
+        function toggleWebsiteField() {
+            const website = document.getElementById('website').value;
+            const messageType = document.getElementById('messageType').value;
+            const linkField = document.getElementById('linkField');
+            document.getElementById('otherWebsiteField').style.display = (website === 'Other') ? 'block' : 'none';
+            if (website === 'Other' && messageType !== 'SMS' && messageType !== 'Website Message') {
+                linkField.style.display = 'block';
+            } else if (messageType === 'Email') {
+                linkField.style.display = 'block';
+            } else {
+                linkField.style.display = 'none';
+            }
+        }
+
+        function autofillPhone() {
+            const messagerName = document.getElementById('messagerName').value;
+            const messagerPhone = document.getElementById('messagerPhone');
+            messagerPhone.value = contactPhones[messagerName] || '';
+        }
+
+        function generateTemplate() {
+            let recipientName = document.getElementById('recipientName').value.trim();
+            const messageType = document.getElementById('messageType').value.trim();
+            const recipientEmail = document.getElementById('recipientEmail').value.trim();
+            const recipientPhone = document.getElementById('recipientPhone').value.trim();
+            const messagerName = document.getElementById('messagerName').value.trim();
+            const messagerPhone = document.getElementById('messagerPhone').value.trim();
+            const website = document.getElementById('website').value.trim();
+            const otherWebsite = document.getElementById('otherWebsite').value.trim();
+            const link = document.getElementById('link').value.trim();
+
+            if (!recipientName) {
+                recipientName = "Hello!";
+            }
+
+            if (!messageType || !messagerName || !messagerPhone || !website || (messageType === 'Email' && !recipientEmail) || (messageType === 'SMS' && !recipientPhone) || (website === 'Other' && messageType !== 'Website Message' && messageType !== 'SMS' && !link) || (messageType === 'Email' && !link)) {
+                alert("Please fill out all required fields.");
+                return false;
+            }
+
+            let headerLine = '';
+            let contactName = '';
+
+            if (messageType === 'SMS') {
+                contactName = messagerName.split(' ')[0];
+                headerLine = `Recipient Phone: ${recipientPhone} \n\n`;
+            } else if (messageType === 'Email') {
+                contactName = `${messagerName}\n${messagerPhone}`;
+                headerLine = `Recipient Email: ${recipientEmail}\n\n`;
+            } else {
+                contactName = `${messagerName}\n${messagerPhone}`;
+            }
+
+            let propertyListing = `the 3-bedroom rental property you have listed on ${website === 'Other' ? otherWebsite : website}${messageType === 'Website Message' ? '' : (link ? ` (${link})` : '')}`;
+
+            if (messageType === 'Website Message') {
+                propertyListing = `the 3-bedroom rental property you have listed`;
+            }
+
+            const template = `${headerLine}${recipientName !== "Hello!" ? 'Dear ' + recipientName : recipientName},
+
+I hope this message finds you well. My name is ${messagerName}, and I am reaching out to you to express our strong interest in ${propertyListing}. We are a group of two senior UBC students and a young professional (all female) seeking a comfortable and well-maintained home, and your property seems to fit our needs perfectly.\n\nWe are looking to move in on September 1st, but we are flexible with the dates if needed. Our group is committed to renting for at least one year, with the potential for a longer stay.
+
+We believe we would be ideal tenants for your property and would like to outline a few reasons why:
+   - Responsible and Reliable: Each of us has past experience renting and can provide excellent references from previous landlords. We are also prepared to provide credit checks and proof of payment to demonstrate our reliability and financial stability.
+   - Respectful and Considerate: We take pride in maintaining a clean and tidy living space. We are quiet and respectful neighbors, committed to ensuring the property is well cared for. None of us are smokers, and we do not host parties, which helps maintain a peaceful living environment.
+   - Professional and Organized: With a mix of senior students and young professionals, we bring a balanced and mature approach to living. Our schedules are well-organized, and we respect each other’s space and privacy.
+
+We are very eager to schedule a viewing at your earliest convenience and discuss any further details. We are confident that our group would be a great fit for your property and would love the opportunity to demonstrate our suitability in person.
+
+Thank you for considering our application. We look forward to hearing from you soon.
+
+Warm regards,
+${contactName}`;
+
+            document.getElementById('templateOutput').innerText = template;
+
+            // Trigger confetti effect
+            triggerConfetti();
+            return false; // Prevent form submission
+        }
+
+        function copyToClipboard() {
+            const templateOutput = document.getElementById('templateOutput').innerText;
+            navigator.clipboard.writeText(templateOutput).then(function() {
+                alert('Template copied to clipboard!');
+            }, function(err) {
+                alert('Failed to copy template: ', err);
+            });
+        }
+
+        function triggerConfetti() {
+            const confetti = document.getElementById('confetti');
+            confetti.style.display = 'block';
+
+            // Confetti effect code
+            const confettiCount = 200;
+            const colors = ['#ff0', '#f0f', '#0ff', '#0f0', '#f00'];
+            for (let i = 0; i < confettiCount; i++) {
+                const confetto = document.createElement('div');
+                confetto.style.position = 'absolute';
+                confetto.style.width = '10px';
+                confetto.style.height = '10px';
+                confetto.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetto.style.borderRadius = '50%';
+                confetto.style.left = `${Math.random() * 100}vw`;
+                confetto.style.top = `${Math.random() * 100}vh`;
+                confetto.style.opacity = Math.random();
+                confetto.style.transform = `translateY(${Math.random() * 100}px) rotate(${Math.random() * 360}deg)`;
+                confetti.appendChild(confetto);
+
+                setTimeout(() => {
+                    confetto.style.transform = `translateY(${Math.random() * 100}px)`;
+                    confetto.style.opacity = '0';
+                }, 1000);
+            }
+
+            setTimeout(() => {
+                confetti.style.display = 'none';
+                confetti.innerHTML = '';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
